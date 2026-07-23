@@ -5,9 +5,6 @@ Theme Factory integration plugin. Migrates blog content authored in
 Pack "sections" — into native Shopify metaobject entries, attached to a
 Shopify article and rendered from Liquid.
 
-Current version: **0.1.1** — see [CHANGELOG.md](./CHANGELOG.md) for history,
-including two silent-failure Liquid bugs fixed after 0.1.0.
-
 ## What it does
 
 1. Reads a Pack blog/article and its sections via Pack's own hosted MCP
@@ -42,7 +39,6 @@ pack-blog-metaobjects/
     gotchas.md
   .env.example             # documents required env vars for local testing
   .gitignore
-  CHANGELOG.md
   README.md
 ```
 
@@ -86,16 +82,7 @@ Point `tf run` at the plugin directory directly — no install needed:
 tf run ./some-task.md --with-plugin ./pack-blog-metaobjects
 ```
 
-Confirm it actually engaged and loaded (both are separate failure points —
-see CHANGELOG / gotchas for the `esbuild unavailable` case, which skips
-tools silently while knowledge still loads):
-
-```
-[plugins] Engaged: pack-blog-metaobjects
-[plugins] Injected knowledge from: pack-blog-metaobjects
-```
-
-and check `logs/<runId>.log` under `INTEGRATION PLUGINS` for the same.
+Check `logs/<runId>.log` under `INTEGRATION PLUGINS` for the same.
 
 ## Adding this to the `tf-plugins` repo
 

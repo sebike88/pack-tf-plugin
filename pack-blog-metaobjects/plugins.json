@@ -1,0 +1,21 @@
+{
+  "name": "pack-blog-metaobjects",
+  "version": "0.1.0",
+  "kind": "integration",
+  "coreApi": "^1.0.0",
+  "description": "Migrates blog content authored in the Pack Digital CMS platform (blogs/articles built from Pack 'sections') into native Shopify metaobject entries that can be attached to Shopify articles and rendered from Liquid. Use when a task mentions Pack Digital, Pack CMS, Pack sections, migrating a Pack blog/article, or converting Pack content blocks into Shopify metaobjects. NOT for Pack's Hydrogen storefront rendering, NOT for non-blog Pack content (pages, product pages, collection pages) unless the task explicitly asks to extend this same pattern to them.",
+  "dependsOn": ["theme"],
+  "storeSettings": [
+    "pack_access_token",
+    "pack_store_id",
+    "pack_content_environment_id",
+    "shopify_admin_access_token"
+  ],
+  "npmDeps": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "provides": {
+    "knowledge": "knowledge/",
+    "tools": "tools.ts"
+  }
+}

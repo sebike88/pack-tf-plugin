@@ -76,7 +76,6 @@ pack-blog-metaobjects/
     gotchas.md
   .env.example
   .gitignore
-  CHANGELOG.md
   README.md
 ```
 

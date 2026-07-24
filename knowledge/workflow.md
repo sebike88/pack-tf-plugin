@@ -42,9 +42,20 @@ For each section instance, call `upsert_metaobject_entry` with:
 - `fields`: the section's field values, keyed the same as the field schema
   you used in step 3.
 
-If a field is an image, call `upload_image_from_url` first and pass the
-returned file GID as the field value — not the bare Pack CDN URL (see
-gotchas.md).
+Per field type, before passing the value (see gotchas.md for the why):
+
+- **image** — call `upload_image_from_url` first and pass the returned file
+  GID, not the bare Pack CDN URL.
+- **richtext/markdown** — pass the Pack value as-is. The tool converts
+  markdown to HTML itself for multi_line_text fields (Shopify has no markdown
+  renderer); don't pre-convert in the agent.
+- **json / arrays / objects** — pass the actual array/object (the tool
+  serializes it) or a valid JSON string; never a display string, and never
+  into a text field.
+
+The display name for entries is not set here — it's configured once on the
+definition in step 3 (`displayNameKey`, auto-picked from a heading/title/name
+field). Entries derive their display name from that field automatically.
 
 ## 5. Link the entries to the Shopify article
 

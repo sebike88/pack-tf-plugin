@@ -51,20 +51,40 @@
   JSON surfaces as a tool error, not a silent bad write.
 
 - **Markdown is converted to HTML server-side — Shopify has no markdown
-  renderer.** Pack `richtext` fields often contain markdown. A
-  `multi_line_text_field` (what richtext maps to) stores exactly the string
-  it's given and the Liquid snippets output it raw, so raw markdown would
-  render as literal `**asterisks**` and `# hashes` on the storefront.
-  `upsert_metaobject_entry` handles this itself: it looks up each field's
-  defined type and runs a markdown->HTML conversion on `multi_line_text_field`
-  values (values that already look like HTML are passed through unchanged). So
-  pass the Pack value as-is — do NOT pre-convert in the agent, and don't
-  assume a Shopify-side filter exists, because there isn't one. Render the
-  result with `{{ block.<field>.value }}` (no escaping — Shopify Liquid
+  renderer.** Pack `text` and `richtext` fields often contain markdown. Both
+  Shopify text field types (`single_line_text_field` and
+  `multi_line_text_field`) store exactly the string they're given and the
+  Liquid snippets output it raw, so raw markdown would render as literal
+  `**asterisks**` and `# hashes` on the storefront. `upsert_metaobject_entry`
+  handles this itself: it looks up each field's defined type and runs a
+  markdown->HTML conversion on **every text field** (values that already look
+  like HTML are passed through unchanged); `url`, `number`, `boolean`, `json`
+  and `file_reference` are deliberately left alone. So pass the Pack value
+  as-is — do NOT pre-convert when the bundled server is doing the write, and
+  don't assume a Shopify-side filter exists, because there isn't one. Render
+  the result with `{{ block.<field>.value }}` (no escaping — Shopify Liquid
   doesn't auto-escape). The converter (in `server/index.js`) covers common
   markdown but is not a full CommonMark parser; if a section relies on exotic
   markdown (tables, deep nesting), verify the rendered HTML and extend the
   converter rather than assuming it round-tripped.
+
+  **If the bundled server can't do it, the agent must.** The
+  `shopify-metaobjects` server (which owns this conversion) has a known
+  history of failing to connect — see the path-resolution note in
+  `tools.ts`. If it's unavailable, or an `upsert_metaobject_entry` call
+  errors, the conversion did NOT happen. In that case the agent is
+  responsible for converting the markdown to HTML itself before the value is
+  written, applying the same rules the server would: convert every text-field
+  value, leave values that are already HTML untouched, and never touch
+  `url`/`number`/`boolean`/`json`/`file_reference`. The goal is invariant:
+  a text field must never reach the storefront as raw markdown, regardless of
+  which side did the conversion.
+
+  Wrapping note: the server's converter wraps a bare string in `<p>…</p>`.
+  For a `single_line_text_field` used as a display-name source (heading /
+  title / name) or output raw in Liquid, that `<p>` wrapper is usually
+  unwanted — strip the outer paragraph for single-line values when converting
+  by hand.
 
 - **Write the full ordered list in one `link_metaobjects_to_article` call.**
   Don't call it once per block. `list.metaobject_reference` metafields store

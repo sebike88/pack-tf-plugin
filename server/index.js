@@ -70,6 +70,17 @@ const PACK_TO_METAOBJECT_FIELD_TYPE = {
   list: "json",
 };
 
+// Shopify metaobject field types that store free text and render whatever
+// string they're given verbatim (no markdown renderer). Values landing in
+// either of these are run through markdown->HTML on upsert, so Pack markdown
+// never reaches the storefront as literal `**`/`#`. url, number, boolean,
+// json and file_reference are deliberately excluded — converting them would
+// corrupt the value.
+const TEXT_FIELD_TYPES = new Set([
+  "single_line_text_field",
+  "multi_line_text_field",
+]);
+
 // Which field key should serve as a metaobject's display name (the label
 // Shopify shows for an entry in the admin and in pickers). Set once on the
 // DEFINITION via displayNameKey; every entry then derives its display name
@@ -231,7 +242,7 @@ const tools = [
   {
     name: "ensure_metaobject_definition",
     description:
-      "Creates a Shopify metaobject definition for a Pack section type, or if one already exists, additively adds any fields the Pack schema now has that the definition lacks (idempotent — safe to call every run). Existing fields are never modified or removed. Type should be prefixed pack_ to avoid colliding with unrelated merchant metaobjects. Fields is the Pack section's field schema: an array of {key, component, label}. This tool defines the schema only — field VALUES are written later by upsert_metaobject_entry, which is where richtext values must already be HTML (Shopify has no markdown renderer) and json/array values are serialized.",
+      "Creates a Shopify metaobject definition for a Pack section type, or if one already exists, additively adds any fields the Pack schema now has that the definition lacks (idempotent — safe to call every run). Existing fields are never modified or removed. Type should be prefixed pack_ to avoid colliding with unrelated merchant metaobjects. Fields is the Pack section's field schema: an array of {key, component, label}. This tool defines the schema only — field VALUES are written later by upsert_metaobject_entry, which converts markdown in text fields to HTML for you (Shopify has no markdown renderer) and serializes json/array values.",
     inputSchema: {
       type: "object",
       properties: {
@@ -386,7 +397,7 @@ const tools = [
   {
     name: "upsert_metaobject_entry",
     description:
-      "Creates or updates a metaobject entry by handle (idempotent upsert — always use a stable handle derived from the Pack section id so re-imports update in place instead of duplicating). fields is a flat map of field key -> value. Every Shopify metaobject field stores a STRING; the tool handles conversion based on each field's defined type: arrays/objects destined for a json field are JSON-stringified for you, and multi_line_text (richtext) values are converted from markdown to HTML automatically (Shopify has no markdown renderer). Values that are already HTML are left as-is. For a file_reference field pass the GID from upload_image_from_url, not a bare URL.",
+      "Creates or updates a metaobject entry by handle (idempotent upsert — always use a stable handle derived from the Pack section id so re-imports update in place instead of duplicating). fields is a flat map of field key -> value. Every Shopify metaobject field stores a STRING; the tool handles conversion based on each field's defined type: arrays/objects destined for a json field are JSON-stringified for you, and all text-field values (both single_line_text and multi_line_text) are converted from markdown to HTML automatically (Shopify has no markdown renderer). Values that are already HTML are left as-is. For a file_reference field pass the GID from upload_image_from_url, not a bare URL.",
     inputSchema: {
       type: "object",
       properties: {
@@ -407,11 +418,12 @@ const tools = [
         }
 
         let serialized = String(value);
-        // Rich text: Pack sends markdown, Shopify stores it verbatim and
+        // Text fields: Pack sends markdown, Shopify stores it verbatim and
         // renders it verbatim, so convert to HTML here rather than trusting
         // the caller to have done it. Keyed off the field's DEFINED type, so
-        // this only touches multi_line_text fields.
-        if (fieldTypes[key] === "multi_line_text_field") {
+        // this only touches the two text field types (single_line and
+        // multi_line) — never url/number/boolean/json/file_reference.
+        if (TEXT_FIELD_TYPES.has(fieldTypes[key])) {
           serialized = ensureHtml(serialized);
         }
         return { key, value: serialized };
